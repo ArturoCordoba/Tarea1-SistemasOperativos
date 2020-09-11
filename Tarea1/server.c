@@ -30,7 +30,7 @@ int main() {
     unsigned int sin_size = sizeof(clientAddr);
     int clientSocket = accept(serverSocket, (struct sockaddr *) &clientAddr, &sin_size);
     char *ip = inet_ntoa(clientAddr.sin_addr);
-    printf("Direccion IP del cliente: %s", ip);
+    printf("Direccion IP del cliente: %s\n", ip);
 
     // Se envian datos al cliente
     send(clientSocket, serverMessage, sizeof(serverMessage), 0);
