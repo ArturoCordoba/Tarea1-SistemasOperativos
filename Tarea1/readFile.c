@@ -5,15 +5,16 @@
 unsigned char* readFile(char* filename, long* size);
 
 int main() {
+    char filename[] = "beach.png";
     long *size = malloc(sizeof(long));
-    unsigned char* buffer = readFile("beach.png", size);
+    unsigned char* buffer = readFile(filename, size);
 
     if (buffer != NULL) {
         FILE *write_ptr;
         write_ptr = fopen("test.png","wb");
         fwrite(buffer,*size,1,write_ptr);
         fclose(write_ptr);
-
+    
         free(buffer);
         free(size);
         return 0;
