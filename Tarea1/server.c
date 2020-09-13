@@ -48,6 +48,11 @@ int main() {
     return 0;
 }
 
+/**
+ * Funcion para recibir un archivo proveniente de un socket clietne
+ * socket: descriptor del socket cliente
+ * return: 0 si todo salio bien, -1 en caso contrario
+*/ 
 int receiveFile(int socket) {
     // Mensaje del cliente con el nombre y dimension del archivo
     unsigned char clientMessage[BUFFER_SIZE];
@@ -57,7 +62,7 @@ int receiveFile(int socket) {
 
     // Apertura del archivo
     FILE *write_ptr;
-    write_ptr = fopen("test-server.png","wb");
+    write_ptr = fopen(filename,"wb");
 
     // Calculo aproximado de iteraciones necesarias
     int iter = (atoi(fileSize)/BUFFER_SIZE);
