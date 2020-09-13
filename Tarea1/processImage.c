@@ -13,6 +13,12 @@ int main() {
     return 0;
 }
 
+/**
+ * Funcion para calcular el canal dominante de una imagen
+ * filepath: ruta de la imagen a procesar
+ * return: numero que indica el canal dominante
+ *         1: canal rojo, 2: canal verde, 3: canal azul
+*/ 
 int processImage(char* filepath) {
     FILE *pFile = fopen(filepath, "rb");
     if(!pFile) {
@@ -66,8 +72,6 @@ int processImage(char* filepath) {
 
     fclose(pFile);
 
-    //printf("Width: %d - Height: %d - Channels: %d\n", width, height, channels);
-
     long sumR = 0, sumG = 0, sumB = 0; // Sumatoria de cada canal
     for (int y = 0; y < height; y++) {
         png_byte* row = row_pointers[y];
@@ -80,6 +84,8 @@ int processImage(char* filepath) {
     }
     int predominant = getPredominantColor(sumR, sumG, sumB);
     printf("Color: %d\n", predominant);
+
+    free(row_pointers);
 
     return 0;
 }
