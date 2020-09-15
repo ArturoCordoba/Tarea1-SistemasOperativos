@@ -7,9 +7,10 @@ int getPredominantColor(long sumR, long sumG, long sumB);
 int processImage(char* filepath);
 
 int main() {
-    char filename[] = "beach2.png";
-    processImage(filename);
 
+    char filename[] = "beach.png";
+    int result = processImage(filename);
+    printf("Color: %d\n", result);
     return 0;
 }
 
@@ -63,31 +64,34 @@ int processImage(char* filepath) {
         return -1;
     }
 
+    // Memoria para almacenar los pixeles de la imagen
     png_bytep *row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
     for (int i = 0; i < height; i++) {
         row_pointers[i] = (png_byte*) malloc(png_get_rowbytes(png_ptr,info_ptr));
     }
 
+    // Lectura de los pixeles
     png_read_image(png_ptr, row_pointers);
-
-    fclose(pFile);
-
     long sumR = 0, sumG = 0, sumB = 0; // Sumatoria de cada canal
     for (int y = 0; y < height; y++) {
         png_byte* row = row_pointers[y];
         for (int x = 0; x < width; x++) {
             png_byte* pixel = &(row[x*3]);
+            // Suma del pixel a la sumatoria del canal correspondiente
             sumR += pixel[0];
             sumG += pixel[1];
             sumB += pixel[2];
         }
     }
-    int predominant = getPredominantColor(sumR, sumG, sumB);
-    printf("Color: %d\n", predominant);
 
+    // Calculo del color predominante
+    int predominant = getPredominantColor(sumR, sumG, sumB);
+
+    // Limpieza de memoria
+    fclose(pFile);
     free(row_pointers);
 
-    return 0;
+    return predominant;
 }
 
 /**
