@@ -4,15 +4,15 @@
 #include <string.h>
 #include <stdlib.h>
 
+const char DATA_PROCESSING_PATH[] = "psot1-dprocessing";
+
+
 int createDirectory(char* filepath);
 char* concat(const char *s1, const char *s2);
-char* processDirectory();
 char* long2str(long number);
 char* createDataFolders();
 
 int main() {
-    char* namePDir = processDirectory();
-
     char* dataFolder = createDataFolders();
     printf("Resultado: %s\n", dataFolder);
 
@@ -45,31 +45,14 @@ int createDirectory(char* filepath) {
 }
 
 /**
- * Funcion para crear los directorios de procesamiento de imagenes
- * return: path a la carpeta correspondiente al contenedor
-*/  
-char* processDirectory() {
-    createDirectory("psot1-dprocessing");
-    char *sCounter = NULL;
-    char *name = NULL;
-    int created = -1; 
-    int counter = 0;
-
-    // Se determina el numero de contenedor correspondiente
-    while (created != 0){
-        counter++;
-        sCounter = long2str(counter);
-        name = concat("psot1-dprocessing/container", sCounter);
-        created = createDirectory(name);
-    }
-    return name;
-}
-
-/**
  * Funcion para crear los directorios de almacenamiento de imagenes procesadas
  * return: path a la carpeta correspondiente al contenedor
 */  
 char* createDataFolders() {
+    // Directorio para almacenamiento de imagenes por procesar
+    createDirectory((char*) DATA_PROCESSING_PATH);
+
+    // Directorios para almacenamiento de las imagenes
     createDirectory("psot1-dstorage");
     char *sCounter = NULL;
     char *name = NULL;
