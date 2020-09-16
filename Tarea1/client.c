@@ -13,6 +13,7 @@ const char INCOMPLETE_MSG[] = "INCOMPLETE";
 const char COMPLETE_MSG[] = "COMPLETE";
 const char PROCESS_COMPLETE_MSG[] = "PROCESS_COMPLETE";
 const char END_MSG[] = "END";
+const char ERROR[] = "*$ERROR";
 
 int sendFile(char* filepath, int socket);
 char* concat(const char *s1, const char *s2);
@@ -25,7 +26,7 @@ int main() {
     // Configuracion de direccion y puerto del cliente
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(8080); // Puerto
+    serverAddr.sin_port = htons(8081); // Puerto
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Direccion IP del servidor 
 
     // Se intenta conectar con el puerto de la direccion ip establecida
@@ -44,6 +45,7 @@ int main() {
         printf("Ingrese la ruta: ");
         scanf("%s", filepath);
 
+        // Envio del mensaje de inicio
         send(cSocket, START_MSG, BUFFER_SIZE, 0);
 
         // Envio del archivo
@@ -75,6 +77,7 @@ int sendFile(char* filepath, int socket) {
     FILE *pFile = fopen(filepath, "rb");
     if (!pFile) {
         printf("Error al abrir el archivo\n");
+        send(socket, ERROR, sizeof(ERROR), 0);
         return -1;
     }
 
@@ -134,7 +137,7 @@ int sendFile(char* filepath, int socket) {
     if (send(socket, END_MSG, sizeof(END_MSG), 0) == -1) {
         printf("Error al enviar mensaje de finalizacion");
     }
-
+    
     fclose(pFile);
     return 0;
 }

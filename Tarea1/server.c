@@ -15,6 +15,7 @@ const char COMPLETE_MSG[] = "COMPLETE";
 const char END_MSG[] = "END";
 const char PROCESS_COMPLETE_MSG[] = "PROCESS_COMPLETE";
 const char DATA_PROCESSING_PATH[] = "psot1-dprocessing/";
+const char ERROR[] = "*$ERROR";
 
 void listenClient(int serverSocket, char* dfolderpath);
 char* receiveFile(int socket); 
@@ -40,7 +41,7 @@ int main() {
     // Configuracion de direccion y puerto del servidor
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(8080); // Puerto
+    serverAddr.sin_port = htons(8081); // Puerto
     serverAddr.sin_addr.s_addr = INADDR_ANY; // Direccion IP
     
     // Se asigna el puerto al socket
@@ -49,7 +50,9 @@ int main() {
     // Escucha de conexiones entrantes
     listen(serverSocket, 5);
 
-    listenClient(serverSocket, dfolderpath);
+    while (1) {
+        listenClient(serverSocket, dfolderpath);
+    }
 
     // Cerrar la conexion
     close(serverSocket);
@@ -65,7 +68,7 @@ void listenClient(int serverSocket, char* dfolderpath) {
     // Se espera por una conexion con un cliente
     int clientSocket = accept(serverSocket, (struct sockaddr *) &clientAddr, &sin_size);
     char *ipClient = inet_ntoa(clientAddr.sin_addr);
-    //printf("Direccion IP del cliente: %s\n", ipClient);
+    printf("Cliente %s conectado!\n", ipClient);
 
     unsigned char* buffer = (char*) malloc(sizeof(unsigned char)*BUFFER_SIZE);
     while (1) {
@@ -79,10 +82,15 @@ void listenClient(int serverSocket, char* dfolderpath) {
         // Recepcion del archivo
         char* filename = receiveFile(clientSocket);
 
-        int result = classifyImage(dfolderpath, filename);
+        // Clasificacion del archivo
+        if (strcmp(filename, ERROR) != 0) {
+            classifyImage(dfolderpath, filename);
+        }
 
+        // Mensaje de finalizacion de proceso
         send(clientSocket, PROCESS_COMPLETE_MSG, BUFFER_SIZE, 0);
     }
+    printf("Conexion perdida! Esperando nueva conexion...\n");
 }
 
 /**
@@ -94,6 +102,11 @@ char* receiveFile(int socket) {
     // Mensaje del cliente con el nombre y dimension del archivo
     unsigned char clientMessage[BUFFER_SIZE];
     int r = recv(socket, &clientMessage, BUFFER_SIZE, 0);
+
+    if(strcmp(clientMessage, ERROR) == 0) { // Ocurrio un error con el cliente
+        return (char*)ERROR;
+    }
+
     char *filename = strtok(clientMessage, "*");
     char *fileSize = strtok(NULL, "*");
 
@@ -119,6 +132,14 @@ char* receiveFile(int socket) {
         // Lectura del mensaje entrante
         int readBytes = recv(socket, buffer, BUFFER_SIZE, 0);
 
+        if (readBytes == 0) { // Conexion perdida
+            fclose(write_ptr);
+            free(buffer);
+            free(name);
+            remove(filepath);
+            return (char*)ERROR;
+        }
+
         // Se verifica si ha finalizado el envio del archivo
         if (strcmp(END_MSG, buffer) == 0) {
             break;
@@ -129,7 +150,15 @@ char* receiveFile(int socket) {
             int completed = 0;
             while (!completed) {
                 // Envio del mensaje indicando una recepcion incompleta
-                send(socket, INCOMPLETE_MSG, BUFFER_SIZE, 0);
+                int s = send(socket, INCOMPLETE_MSG, BUFFER_SIZE, 0);
+
+                if (s == 0) { // Conexion perdida
+                    fclose(write_ptr);
+                    free(buffer);
+                    free(name);
+                    remove(filepath);
+                    return (char*)ERROR;
+                }
 
                 // Se restablece la direccion de memoria del buffer
                 memset(buffer, 0, sizeof(unsigned char)*BUFFER_SIZE);
@@ -253,8 +282,9 @@ int processImage(char* filename) {
     fread(header, 1, len, pFile); // Lectura de los primeros 8 bits
     int is_png = !png_sig_cmp(header, 0, len); 
     if (!is_png) {
-        printf("Archivo %s no es una imagen en formato png\n", filepath);
+        printf("Archivo %s no es una imagen en formato png\n", filename);
         fclose(pFile);
+        remove(filepath); // Se elimina el archivo de la carpeta de procesamineto
         return -1;
     }
 
