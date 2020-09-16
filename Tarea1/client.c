@@ -76,7 +76,7 @@ int sendFile(char* filepath, int socket) {
     // Apertura del archivo en modo de lectura binaria
     FILE *pFile = fopen(filepath, "rb");
     if (!pFile) {
-        printf("Error al abrir el archivo\n");
+        printf("Archivo %s no encontrado\n", filepath);
         send(socket, ERROR, sizeof(ERROR), 0);
         return -1;
     }

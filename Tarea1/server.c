@@ -90,7 +90,7 @@ void listenClient(int serverSocket, char* dfolderpath) {
         // Mensaje de finalizacion de proceso
         send(clientSocket, PROCESS_COMPLETE_MSG, BUFFER_SIZE, 0);
     }
-    printf("Conexion perdida! Esperando nueva conexion...\n");
+    printf("Conexion perdida! Esperando nueva conexion...\n\n");
 }
 
 /**
