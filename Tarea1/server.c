@@ -13,6 +13,7 @@ const int  BUFFER_SIZE = 1023;
 const char INCOMPLETE_MSG[] = "INCOMPLETE";
 const char COMPLETE_MSG[] = "COMPLETE";
 const char END_MSG[] = "END";
+const char PROCESS_COMPLETE_MSG[] = "PROCESS_COMPLETE";
 const char DATA_PROCESSING_PATH[] = "psot1-dprocessing/";
 
 char* receiveFile(int socket); 
@@ -56,10 +57,18 @@ int main() {
     char *ipClient = inet_ntoa(clientAddr.sin_addr);
     //printf("Direccion IP del cliente: %s\n", ipClient);
 
-    // Recepcion del archivo
-    char* filename = receiveFile(clientSocket);
+    unsigned char* buffer = (char*) malloc(sizeof(unsigned char)*BUFFER_SIZE);
+    while (1) {
+        memset(buffer, 0, sizeof(unsigned char)*BUFFER_SIZE);
+        recv(clientSocket, buffer, BUFFER_SIZE, 0);
 
-    int result = classifyImage(dfolderpath, filename);
+        // Recepcion del archivo
+        char* filename = receiveFile(clientSocket);
+
+        int result = classifyImage(dfolderpath, filename);
+
+        send(clientSocket, PROCESS_COMPLETE_MSG, BUFFER_SIZE, 0);
+    }
 
     // Cerrar la conexion
     close(serverSocket);
