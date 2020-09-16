@@ -50,8 +50,12 @@ int main() {
         //char filepath[] = "beach2.png";
         sendFile(filepath, cSocket);
 
-        int r = recv(cSocket, buffer, BUFFER_SIZE, 0);
-        printf("R: %d", r);
+        // Se espera por el mensaje de finalizacion
+        int r =recv(cSocket, buffer, BUFFER_SIZE, 0);
+
+        if (r == 0){ // Se perdio la conexion
+            break;
+        }
     }
     
     // Se cierra la conexion con el servidor

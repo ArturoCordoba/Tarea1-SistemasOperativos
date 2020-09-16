@@ -16,6 +16,7 @@ const char END_MSG[] = "END";
 const char PROCESS_COMPLETE_MSG[] = "PROCESS_COMPLETE";
 const char DATA_PROCESSING_PATH[] = "psot1-dprocessing/";
 
+void listenClient(int serverSocket, char* dfolderpath);
 char* receiveFile(int socket); 
 char* long2str(int number);
 char* concat(const char *s1, const char *s2);
@@ -48,6 +49,15 @@ int main() {
     // Escucha de conexiones entrantes
     listen(serverSocket, 5);
 
+    listenClient(serverSocket, dfolderpath);
+
+    // Cerrar la conexion
+    close(serverSocket);
+    free(dfolderpath);
+    return 0;
+}
+
+void listenClient(int serverSocket, char* dfolderpath) {
     // Estructura para obtener la informacion del cliente
     struct sockaddr_in clientAddr;
     unsigned int sin_size = sizeof(clientAddr);
@@ -60,7 +70,11 @@ int main() {
     unsigned char* buffer = (char*) malloc(sizeof(unsigned char)*BUFFER_SIZE);
     while (1) {
         memset(buffer, 0, sizeof(unsigned char)*BUFFER_SIZE);
-        recv(clientSocket, buffer, BUFFER_SIZE, 0);
+        int m = recv(clientSocket, buffer, BUFFER_SIZE, 0); // Se espera por el mensaje de inicio
+
+        if (m == 0) { // Se perdio la conexion con el cliente
+            break;
+        }
 
         // Recepcion del archivo
         char* filename = receiveFile(clientSocket);
@@ -69,11 +83,6 @@ int main() {
 
         send(clientSocket, PROCESS_COMPLETE_MSG, BUFFER_SIZE, 0);
     }
-
-    // Cerrar la conexion
-    close(serverSocket);
-
-    return 0;
 }
 
 /**
@@ -217,7 +226,11 @@ char* createDataFolders() {
     createDirectory(greenFolder);
     createDirectory(blueFolder);
     createDirectory(notTrustedFolder);
-    return name;
+
+    // Se guarda en memoria la ruta de almacenamiento
+    char* path = malloc(strlen(name) + 1);
+    strcpy(path, name);
+    return path;
 }
 
 /**
