@@ -26,7 +26,7 @@ int main() {
     // Configuracion de direccion y puerto del cliente
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(8081); // Puerto
+    serverAddr.sin_port = htons(8080); // Puerto
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Direccion IP del servidor 
 
     // Se intenta conectar con el puerto de la direccion ip establecida
@@ -44,6 +44,11 @@ int main() {
         char filepath[100];
         printf("Ingrese la ruta: ");
         scanf("%s", filepath);
+
+        // Comando para finalizar el programa
+        if(strcmp(filepath, "fin") == 0) {
+            break;
+        }
 
         // Envio del mensaje de inicio
         send(cSocket, START_MSG, BUFFER_SIZE, 0);
