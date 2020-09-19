@@ -29,11 +29,12 @@ int processImage(char* filepath);
 int copyFile(char* filepath, char* dst_path);
 void saveImage(char* filename, char* dst_path, int color);
 int classifyImage(char* dfolderpath, char* filename);
+int verifyIP(char* clientIP);
 
 int main() {
     // Creacion de directorios
     char* dfolderpath = createDataFolders(); // Guardar ruta del folder de almacenamiento
-    printf("Ruta: %s\n", dfolderpath);
+    printf("Ruta: %s\n\n", dfolderpath);
 
     // Creacion del descriptor del socket
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -41,7 +42,7 @@ int main() {
     // Configuracion de direccion y puerto del servidor
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(8081); // Puerto
+    serverAddr.sin_port = htons(8080); // Puerto
     serverAddr.sin_addr.s_addr = INADDR_ANY; // Direccion IP
     
     // Se asigna el puerto al socket
@@ -68,10 +69,13 @@ void listenClient(int serverSocket, char* dfolderpath) {
     // Se espera por una conexion con un cliente
     int clientSocket = accept(serverSocket, (struct sockaddr *) &clientAddr, &sin_size);
     char *ipClient = inet_ntoa(clientAddr.sin_addr);
-    printf("Cliente %s conectado!\n", ipClient);
+    printf("Conexion entrante: %s\n", ipClient);
+
+    // Verificacion de la ip del cliente
+    int clientType = verifyIP(ipClient);
 
     unsigned char* buffer = (char*) malloc(sizeof(unsigned char)*BUFFER_SIZE);
-    while (1) {
+    while (clientType != 3) {
         memset(buffer, 0, sizeof(unsigned char)*BUFFER_SIZE);
         int m = recv(clientSocket, buffer, BUFFER_SIZE, 0); // Se espera por el mensaje de inicio
 
@@ -81,16 +85,27 @@ void listenClient(int serverSocket, char* dfolderpath) {
 
         // Recepcion del archivo
         char* filename = receiveFile(clientSocket);
-
-        // Clasificacion del archivo
+        
         if (strcmp(filename, ERROR) != 0) {
-            classifyImage(dfolderpath, filename);
+            // Verificacion del destino segun la ip
+            if(clientType == 1) {
+                // Clasificacion del archivo segun color
+                classifyImage(dfolderpath, filename);
+            } else {
+                // Se almacena en not trusted
+                saveImage(filename, dfolderpath, 0);
+            }
         }
 
         // Mensaje de finalizacion de proceso
         send(clientSocket, PROCESS_COMPLETE_MSG, BUFFER_SIZE, 0);
     }
     printf("Conexion perdida! Esperando nueva conexion...\n\n");
+    free(buffer);
+
+    // Se cierra la conexion
+    shutdown(clientSocket, SHUT_RDWR);
+    close(clientSocket);
 }
 
 /**
@@ -169,7 +184,7 @@ char* receiveFile(int socket) {
                 // Se verifica si el nuevo mensaje se recibio correctamente
                 if (readBytes == BUFFER_SIZE) {
                     completed = 1;
-                    fwrite(buffer,readBytes,1,write_ptr);   
+                    fwrite(buffer,readBytes,1,write_ptr);
                     send(socket, COMPLETE_MSG, BUFFER_SIZE, 0);
                 }
             }
@@ -480,4 +495,62 @@ int classifyImage(char* dfolderpath, char* filename) {
     saveImage(filename, dfolderpath, color);
     free(filename);
     return 0;
+}
+
+/**
+ * Funcion que verifica si una IP es confiable, no confiable, o desconocida
+ * clientIP: string con la IP que se quiere verificar
+ * return:  1 si la ip es confiable (trusted)
+ *          2 si la ip no es confiable (not trusted)
+ *          3 si la ip es desconocida (unknown)
+*/
+/**
+ * Funcion que verifica si una IP es confiable, no confiable, o desconocida
+ * clientIP: string con la IP que se quiere verificar
+ * return: -1 si no existe el archivo configuracion.config
+ *          1 si la ip es confiable (trusted)
+ *          2 si la ip no es confiable (not trusted)
+ *          3 si la ip es desconocida (unknown)
+*/
+int verifyIP(char* clientIP) {
+    FILE *fptr;
+    char * line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    
+    // Apertura del archivo configuracion.config
+    if ((fptr = fopen("configuracion.config", "r")) == NULL) {
+        printf("Archivo configuracion.config no encontrado");
+        return 3;
+    }
+
+    int trustedHosts = 1;
+    while (read = getline(&line, &len, fptr) != -1) {
+        line[strcspn(line, "\n")] = 0; // Quitar el salto de linea
+
+        // Verificacion si es confiable
+        if(trustedHosts) {
+            // Verificar si IP tiene coincidencia
+            if(strcmp(clientIP, line) == 0) {
+                fclose(fptr);
+                printf("%s trusted!\n", clientIP);
+                return 1; // Trusted
+            } 
+            // Final de las ip confiables
+            if(strcmp("not trusted", line) == 0) {
+                trustedHosts = 0;
+            }
+        // Verificacion si no es confiable
+        } else {
+            // Verificar si IP tiene coincidencia
+            if(strcmp(clientIP, line) == 0) {
+                fclose(fptr);
+                printf("%s not trusted!\n", clientIP);
+                return 2; // Not trusted
+            } 
+        }
+    }
+    fclose(fptr);
+    printf("%s unknown!\n", clientIP);
+    return 3; // Unknown
 }
