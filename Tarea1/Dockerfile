@@ -2,18 +2,15 @@ FROM ubuntu:20.04
 
 # Instalacion GCC y libpng
 RUN apt-get update && \
-    apt-get -y install gcc mono-mcs && \
     apt-get install -y libpng-dev && \
     rm -rf /var/lib/apt/lists/*
 
-RUN cd home && mkdir psot1 && mkdir psot1-dstorage
+RUN mkdir psot1
 
 VOLUME /psot1-dstorage/
 
-ADD server.c /home/psot1
-
-RUN cd /home/psot1 && gcc server.c -lpng
+ADD server /psot1
 
 EXPOSE 8080
 
-CMD [ "/home/psot1/a.out" ]
+CMD [ "/psot1/server" ]
