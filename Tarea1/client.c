@@ -11,15 +11,21 @@ const int  BUFFER_SIZE = 1023;
 const char START_MSG[] = "START";
 const char INCOMPLETE_MSG[] = "INCOMPLETE";
 const char COMPLETE_MSG[] = "COMPLETE";
-const char PROCESS_COMPLETE_MSG[] = "PROCESS_COMPLETE";
+const char PROCESS_FINISHED_MSG[] = "PROCESS_FINISHED";
+const char INVALID_FORMAT[] = "INVALID_FORMAT";
 const char END_MSG[] = "END";
 const char ERROR[] = "*$ERROR";
 
 int sendFile(char* filepath, int socket);
 char* concat(const char *s1, const char *s2);
 char* long2str(long number);
+int isPNG(char* filename);
+char* getFilename(char *filepath);
 
-int main() {
+int main(int argc, char **argv) {
+    // Direccion IP del servidor
+    char* serverIP = argv[1];
+
     // Creacion del socket
     int cSocket = socket(AF_INET, SOCK_STREAM, 0);
     
@@ -27,7 +33,7 @@ int main() {
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(8080); // Puerto
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Direccion IP del servidor 
+    serverAddr.sin_addr.s_addr = inet_addr(serverIP); // Direccion IP del servidor 
 
     // Se intenta conectar con el puerto de la direccion ip establecida
     int connectionStatus = connect(cSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
@@ -50,21 +56,29 @@ int main() {
             break;
         }
 
-        // Envio del mensaje de inicio
-        send(cSocket, START_MSG, BUFFER_SIZE, 0);
+        // Se verifica que archivo tenga terminacion .png
+        if(isPNG(filepath)) {
+            // Envio del mensaje de inicio
+            send(cSocket, START_MSG, BUFFER_SIZE, 0);
 
-        // Envio del archivo
-        //char filepath[] = "beach2.png";
-        sendFile(filepath, cSocket);
+            // Envio del archivo
+            sendFile(filepath, cSocket);
 
-        // Se espera por el mensaje de finalizacion
-        int r =recv(cSocket, buffer, BUFFER_SIZE, 0);
-
-        if (r == 0){ // Se perdio la conexion
-            break;
+            // Se espera por el mensaje con el resultado
+            int r = recv(cSocket, buffer, BUFFER_SIZE, 0);      
+            if (r == 0){ // Se perdio la conexion
+                break;
+            } else if(strcmp(buffer, INVALID_FORMAT) == 0) {
+                printf("Archivo %s no procesado, formato no es .png\n", filepath);
+            } else if(strcmp(buffer, "NO CONFIABLE") == 0) {
+                printf("Imagen %s no procesada, %s\n", filepath, buffer);
+            } else if(strcmp(buffer, PROCESS_FINISHED_MSG) != 0) {
+                printf("Imagen %s procesada, color dominante: %s\n", filepath, buffer);
+            }
+        } else {
+            printf("Archivo %s no procesado, formato no es .png\n", filepath);
         }
     }
-    
     // Se cierra la conexion con el servidor
     close(cSocket);
     return 0;
@@ -92,7 +106,8 @@ int sendFile(char* filepath, int socket) {
     rewind(pFile); // Reinicia el cursor de lectura
 
     // Mensaje al servidor indicando datos del archivo
-    char *aux1 = concat(filepath, "*"); // Nombre del archivo
+    char* filename = getFilename(filepath);
+    char *aux1 = concat(filename, "*"); // Nombre del archivo
     char *aux2 = long2str(size);       // Extension del archivo
     char *fileData = concat(aux1,aux2);
     int info = send(socket, fileData, BUFFER_SIZE, 0);
@@ -100,6 +115,7 @@ int sendFile(char* filepath, int socket) {
         printf("Error al enviar datos del archivo");
         return -1;
     }
+    free(filename);
     
     // Envio del archivo al servidor
     while (1) {
@@ -172,4 +188,53 @@ char* long2str(long number) {
     char* buf = malloc(n+1);
     snprintf(buf, n+1, "%lu", number);
     return buf;
+}
+
+/**
+ * Funcion para verificar que un archivo tiene terminacion .png
+ * filename: string con el nombre del archivo
+ * return: 1 si es .png, 0 en caso contrario
+*/ 
+int isPNG(char* filename) {
+    // Se realiza una copia del string original
+    char * copy = malloc(strlen(filename) + 1);
+    strcpy(copy, filename);
+
+    // Se divide el filename utilizando un punto como delimitador
+    char ch[] = ".";
+    char * token = strtok(copy, ch);
+    while(token != NULL){
+        if(strcmp(token, "png") == 0) {
+            free(copy);
+            return 1;
+        }
+        token = strtok(NULL, ch);
+    }
+    free(copy);
+    return 0;
+}
+
+/**
+ * Funcion para obtener el nombre del archivo de la ruta del mismo
+ * filepath: ruta del archivo
+ * return: string con el nombre del archivo
+*/
+char* getFilename(char* filepath) {
+    // Se realiza una copia del string original
+    char * copy = malloc(strlen(filepath) + 1);
+    strcpy(copy, filepath);
+    char * aux = malloc(strlen(filepath) + 1);
+    strcpy(aux, filepath);
+    
+    // Se divide el filename utilizando un '/' como delimitador
+    char ch[] = "/";
+    char * token = strtok(copy, ch);
+
+    while(token != NULL){
+        memset(aux, 0, strlen(filepath) + 1);
+        strcpy(aux, token);
+        token = strtok(NULL, ch);
+    }
+    free(copy);
+    return aux;
 }
