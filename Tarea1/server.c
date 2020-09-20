@@ -13,7 +13,8 @@ const int  BUFFER_SIZE = 1023;
 const char INCOMPLETE_MSG[] = "INCOMPLETE";
 const char COMPLETE_MSG[] = "COMPLETE";
 const char END_MSG[] = "END";
-const char PROCESS_COMPLETE_MSG[] = "PROCESS_COMPLETE";
+const char PROCESS_FINISHED_MSG[] = "PROCESS_FINISHED";
+const char INVALID_FORMAT[] = "INVALID_FORMAT";
 const char DATA_PROCESSING_PATH[] = "psot1-dprocessing/";
 const char ERROR[] = "*$ERROR";
 
@@ -27,8 +28,7 @@ long maxOfTwo(long a, long b);
 int getPredominantColor(long sumR, long sumG, long sumB);
 int processImage(char* filepath);
 int copyFile(char* filepath, char* dst_path);
-void saveImage(char* filename, char* dst_path, int color);
-int classifyImage(char* dfolderpath, char* filename);
+char* saveImage(char* filename, char* dst_path, int color);
 int verifyIP(char* clientIP);
 
 int main() {
@@ -85,20 +85,25 @@ void listenClient(int serverSocket, char* dfolderpath) {
 
         // Recepcion del archivo
         char* filename = receiveFile(clientSocket);
-        
+        char* result = (char*)PROCESS_FINISHED_MSG;
         if (strcmp(filename, ERROR) != 0) {
             // Verificacion del destino segun la ip
             if(clientType == 1) {
                 // Clasificacion del archivo segun color
-                classifyImage(dfolderpath, filename);
+                int color = processImage(filename);
+                if (color == -1 ) { // Formato no es .png
+                    result = (char*)INVALID_FORMAT;
+                } else { // Formato es .png
+                    result = saveImage(filename, dfolderpath, color);
+                }
             } else {
-                // Se almacena en not trusted
-                saveImage(filename, dfolderpath, 0);
+                // Se almacena en 'Not trusted'
+                result = saveImage(filename, dfolderpath, 0);
             }
+            free(filename);
         }
-
         // Mensaje de finalizacion de proceso
-        send(clientSocket, PROCESS_COMPLETE_MSG, BUFFER_SIZE, 0);
+        send(clientSocket, result, BUFFER_SIZE, 0);
     }
     printf("Conexion perdida! Esperando nueva conexion...\n\n");
     free(buffer);
@@ -439,12 +444,12 @@ int copyFile(char* filepath, char* dst_path) {
 }
 
 /**
- * Funcion auxiliar para almacenar la imagen en la carpeta que le corresponde
+ * Funcion para almacenar la imagen en la carpeta correspondiente
  * filename: nombre de la imagen recibida
  * dst_path: ruta a la carpeta del contenedor
  * color: 1 canal rojo, 2 canal verde, 3 canal azul, cualquier otro imagen no confiable
 */ 
-void saveImage(char* filename, char* dst_path, int color) {
+char* saveImage(char* filename, char* dst_path, int color) {
     char* filepath = concat(DATA_PROCESSING_PATH, filename);
     char* dest = NULL;
     switch (color) {
@@ -453,6 +458,7 @@ void saveImage(char* filename, char* dst_path, int color) {
         dest = concat(dest, filename);
         copyFile(filepath, dest);
         printf("Imagen %s procesada, color dominante: ROJO\n", filename);
+        return "ROJO";
         break;
     
     case 2: // Canal dominante verde
@@ -460,6 +466,7 @@ void saveImage(char* filename, char* dst_path, int color) {
         dest = concat(dest, filename);
         copyFile(filepath, dest);
         printf("Imagen %s procesada, color dominante: VERDE\n", filename);
+        return "VERDE";
         break;
     
     case 3: // Canal dominante azul
@@ -467,6 +474,7 @@ void saveImage(char* filename, char* dst_path, int color) {
         dest = concat(dest, filename);
         copyFile(filepath, dest);
         printf("Imagen %s procesada, color dominante: AZUL\n", filename);
+        return "AZUL";
         break;
 
     default: // Imagen de fuente no confiable
@@ -474,40 +482,15 @@ void saveImage(char* filename, char* dst_path, int color) {
         dest = concat(dest, filename);
         copyFile(filepath, dest);
         printf("Imagen %s no procesada, fuente no confiable\n", filename);
+        return "NO CONFIABLE";
         break;
     } 
 }
 
 /**
- * Funcion para almacenar la imagen recibida en la carpeta
- * correspondiente segun su canal dominante
- * dfolderpath: ruta a la carpeta raiz de almacenamiento de datos
- * filename: nombre de la imagen recibida
- * return: 0 sin errores, -1 ocurrio un error
-*/ 
-int classifyImage(char* dfolderpath, char* filename) {
-    // Calculo del color dominante de la imagen
-    int color = processImage(filename); 
-    if(color == -1) {
-        return -1;
-    }
-    // Almacenamiento de la imagen en el folder correspondiente
-    saveImage(filename, dfolderpath, color);
-    free(filename);
-    return 0;
-}
-
-/**
  * Funcion que verifica si una IP es confiable, no confiable, o desconocida
  * clientIP: string con la IP que se quiere verificar
- * return:  1 si la ip es confiable (trusted)
- *          2 si la ip no es confiable (not trusted)
- *          3 si la ip es desconocida (unknown)
-*/
-/**
- * Funcion que verifica si una IP es confiable, no confiable, o desconocida
- * clientIP: string con la IP que se quiere verificar
- * return: -1 si no existe el archivo configuracion.config
+ * return:  3 si no existe el archivo configuracion.config
  *          1 si la ip es confiable (trusted)
  *          2 si la ip no es confiable (not trusted)
  *          3 si la ip es desconocida (unknown)
