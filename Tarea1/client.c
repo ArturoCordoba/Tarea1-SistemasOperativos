@@ -25,6 +25,15 @@ char* getFilename(char *filepath);
 int main(int argc, char **argv) {
     // Direccion IP del servidor
     char* serverIP = argv[1];
+    if(argc != 2) {
+        printf("Por favor proporcione la ip como argumento\n");
+        return 0;
+    }
+    // Se solicita el puerto del servidor
+    char sPort[10];
+    printf("Ingrese el puerto: ");
+    scanf("%s", sPort);
+    int port = atoi(sPort);
 
     // Creacion del socket
     int cSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -32,7 +41,7 @@ int main(int argc, char **argv) {
     // Configuracion de direccion y puerto del cliente
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(8080); // Puerto
+    serverAddr.sin_port = htons(port); // Puerto
     serverAddr.sin_addr.s_addr = inet_addr(serverIP); // Direccion IP del servidor 
 
     // Se intenta conectar con el puerto de la direccion ip establecida

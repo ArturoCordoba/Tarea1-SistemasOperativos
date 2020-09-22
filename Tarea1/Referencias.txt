@@ -1,0 +1,55 @@
+http://es.tldp.org/Tutoriales/PROG-SOCKETS/prog-sockets.html
+
+
+
+gcc processImage.c -lpng
+./a.out
+
+
+gcc server.c -lpng
+
+
+/** Listar todos los contenedores
+docker container ls -a
+
+/** Detener un contenedor
+docker container stop [container_id]
+
+/** Remover un contenedor
+docker container rm [container_id]
+
+/** Listar imagenes
+docker image ls
+
+/** Eliminar una imagen
+docker image rm [image_id1] [image_id2]
+
+/** Listar volumenes
+docker volume ls
+
+/** Crear un volumen
+docker volume create [name]
+
+/** Ver datos de un volumen
+docker volume inspect [name]
+
+/** Eliminar un volumen
+docker volume rm [name]
+
+/** Eliminar todos los volumenes no usados
+docker volume prune
+
+/** Acceder a la terminal de un contenedor
+docker exec -it [container id] bash
+
+/** Copiar un archivo a un contenedor
+docker cp configuracion.config cont:/configuracion.config
+
+
+docker build -t psot1 .
+
+docker run --publish 9090:8080 -v /home/arturo/Desktop/dstorage/:/psot1-dstorage/ --detach --name cont tarea1
+
+
+
+docker run -it [container] bash
